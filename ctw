@@ -1,0 +1,378 @@
+#!/usr/bin/python
+# $HeadURL: http://opensource.hld.ca/svn/trunk/ctw/ctw $
+# $Id: ctw 316 2009-07-14 12:21:59Z dan $
+# vim: ft=python ts=2 sw=2 et:
+
+# Copyright Dan Cardamore <dan@hld.ca>
+# Licensed under the GNU GPL version 2.0
+# See GPL.gz in source distribution for more information
+
+import sys,time,string,urllib.request,urllib.error,urllib.parse
+from threading import Timer
+
+import curses
+import weatherfeed
+
+version = "0.6"
+
+class asciiIcons:
+  def __init__(self):
+    self.blank = """
+                    
+                    
+                    
+                    
+                    
+                    
+"""
+
+    self.lightning = """
+                    
+    \\\\            
+     \\\\\\         
+        \\\\        
+          \\\       
+             \      
+"""
+
+    self.cloudy = """
+     __         _   
+   /-   \_/\---/ \  
+   |         --   | 
+   \-_/---\__--__-| 
+                    
+                    
+"""
+
+    self.raining = """
+     __         _   
+   /-   \_/\---/ \  
+   |         --   | 
+   |______________| 
+                    
+    | | | | | | |   
+"""
+
+
+    self.unknown = """
+                    
+                    
+                    
+                    
+                    
+                    
+"""
+
+    self.sunny = """
+ \    ___           
+    /     \ /       
+ - |       | -      
+    \ ___ /  -      
+  /        \        
+     |  |           
+"""
+
+
+    self.clear = """
+      ___           
+    /     \         
+   |       |        
+    \ ___ /         
+                    
+                    
+"""
+
+    self.partlycloudy = """
+   \  --- ____      
+  - /....|    \/ \  
+  - |...|         | 
+   / \___\   __  /  
+    / |   --/  \    
+                    
+"""
+
+  def getIcon(self, type):
+    """Returns a string with an ascii icon 5 rows by 18 wide
+    type is a string which refers to the icon wanted"""
+    if type == "Partly Cloudy":
+      return self.partlycloudy
+    elif type == "Mostly Cloudy":
+      return self.partlycloudy
+    elif type == "Cloudy":
+      return self.cloudy
+    elif type == "Clear":
+      return self.clear
+    elif type == "Light Rain":
+      return self.raining
+    elif type == "Showers":
+      return self.raining
+    elif type == "AM Showers":
+      return self.raining
+    elif type == "PM Showers":
+      return self.raining
+    elif type == "Isolated T-Storms":
+      return self.lightning
+    elif type == "Mostly Sunny":
+      return self.sunny
+    elif type == "Sunny":
+      return self.sunny
+    else:
+      return self.unknown
+
+def initColors():
+  try:
+    curses.start_color()
+    curses.use_default_colors()
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
+    curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_RED)
+    curses.init_pair(3, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)
+  except curses.error: pass
+
+def scnTitle(win):
+  win.clear()
+  maxy,maxx = win.getmaxyx()
+  maxx -= 2
+  win.bkgd(" ",curses.color_pair(1))
+  try:
+    win.addstr(0,1,
+        ("Location %s  --  Updated: %s" %
+        (weather.currentConditions["cityname"],
+        weather.currentConditions["observed"] )).center(maxx),
+        curses.A_BOLD
+      )
+  except curses.error: pass
+  win.refresh()
+
+def scnCurrent(win):
+  win.clear()
+  maxy,maxx = win.getmaxyx()
+  maxx -= 2
+  line = 0
+  icons = asciiIcons()
+  win.addstr(line,2, icons.getIcon(weather.currentConditions["type"]));line+=6
+  win.addstr(line,2,("%s" %(weather.currentConditions["type"])).center(maxx),curses.color_pair(4));line+=2
+  win.addstr(line,2,"     Temp: %s" %(weather.currentConditions["temperature"]));line+=1
+  if weather.currentConditions["wind"]["speed"] == "calm":
+    win.addstr(line,2,"     Wind: Calm") ;line+=1
+  else:
+    win.addstr(line,2,"     Wind: %s %s" %( weather.currentConditions["wind"]["speed"],
+                                    weather.currentConditions["wind"]["direction"])
+             );line+=1
+  win.addstr(line,2,"Visbility: %s" %(weather.currentConditions["visibility"]));line+=1
+  win.addstr(line,2," Humidity: %s" %(weather.currentConditions["humidity"]));line+=1
+  line += 1
+  win.addstr(line,2,"  Sunrise: %s" %(weather.currentConditions["sunrise"]));line+=1
+  win.addstr(line,2,"   Sunset: %s" %(weather.currentConditions["sunset"]));line+=1
+  line += 1
+  win.addstr(line,2," UV index: %s" %(weather.currentConditions["uv"]["index"]));line+=1
+  win.addstr(line,2,"     risk: %s" %(weather.currentConditions["uv"]["risk"]));line+=1
+
+  win.box()
+  win.addstr(0,1,"Current Conditions",curses.color_pair(2)|curses.A_BOLD); line += 1
+  win.refresh()
+
+def scnForecast(win):
+  maxy,maxx = win.getmaxyx()
+  maxx -= 2
+  line = 0
+  col = 0
+  global dayWindows
+  global forecastWindowsCreated
+  if not forecastWindowsCreated:
+    forecastWindowsCreated = True
+    day = 0
+    dayWindows = []
+    while day < 5:
+      if day < 5:
+        try:
+          dayWindows.append(win.derwin(int(maxy/5),maxx,int(day*(maxy/5))+1,1))
+        except curses.error: pass
+      else:
+        try:
+          dayWindows.append(win.derwin(int(maxy/5),maxx,int((day-5)*(maxy/5))+1,int(maxx/2)+1))
+        except curses.error: pass
+      day += 1
+
+  day = 0
+  while day < 5:
+    scnDay(day)
+    day+=1
+  win.box()
+  try:
+    win.addstr(0,36,"Forecast Conditions",curses.color_pair(2)|curses.A_BOLD); line += 1
+  except curses.error: pass
+  win.refresh()
+
+def scnDay(day):
+  global dayWindows
+  try:
+    win = dayWindows.pop(0)
+  except:
+    return  #this one wasn't allocated a window so just return
+  win.clear()
+  maxy,maxx = win.getmaxyx()
+  maxx -= 13
+  line = 1
+
+  try:
+    win.addstr(line,1,"Hi/Lo: %s/%s" %(weather.forecast[day]["high"],
+                                         weather.forecast[day]["low"]));line+=0
+  except curses.error: pass
+  try:
+    win.addstr(line,maxx,"Wind:%s %s" %( weather.forecast[day]["day"]["wind"]["speed"],
+                                    weather.forecast[day]["day"]["wind"]["direction"])
+             );line+=1
+  except curses.error: pass
+  try:
+    win.addstr(line,1,"%s" %(weather.forecast[day]["day"]["type"]));line+=0
+  except curses.error: pass
+  try:
+    win.addstr(line,maxx,"POP: %s" %(weather.forecast[day]["day"]["pop"]));line+=1
+  except curses.error: pass
+
+  try:
+    win.box()
+  except curses.error: pass
+  try:
+    win.addstr(0,2,"%s: %s"%(weather.forecast[day]["Date"],weather.forecast[day]["Day"]),curses.color_pair(3))
+  except curses.error: pass
+  win.refresh()
+
+def quit():
+  refreshTimer.cancel()
+  sys.exit(1)
+
+def update(stdscr):
+  global weather
+  while 1:
+    try:
+      weather = weatherfeed.Weather(location, metric)
+    except urllib.error.URLError:
+      time.sleep(60)
+      continue
+    break
+
+  scnTitle(twin)
+  scnCurrent(cwin)
+  scnForecast(fwin)
+  stdscr.refresh()
+
+  del weather
+  global refreshTimer
+  try:
+    refreshTimer.cancel()
+  except: pass
+  refreshTimer = Timer(refresh * 60, update, [stdscr])
+  refreshTimer.start()
+
+
+def main(stdscr):
+  global cwin,twin,fwin
+  global twidth,theight
+  theight, twidth = stdscr.getmaxyx()
+
+  global forecastWindowsCreated
+  forecastWindowsCreated = False
+
+  initColors()
+  twin = stdscr.derwin(1,twidth,0,0)
+  cwin = stdscr.derwin(theight-1,int(0.3*twidth),1,0)
+  fwin = stdscr.derwin(theight-1,int(0.7*twidth),1,int(0.3*twidth))
+
+  update(stdscr)
+  stdscr.keypad(1)
+  while 1:
+    try:
+      c = stdscr.getch()
+    except:
+      quit()
+    if c == ord('q'): quit()  # quit
+    else:
+      update(stdscr)
+
+def printVersion():
+  print("ctw version %s"%(version))
+  print("weatherfeed.py backend version: %2.2f"%(weatherfeed.version))
+
+def usage():
+  print("""
+  Welcome to "Curse the Weather" Version %s
+  This program will display the weather for a city on the console.
+  Copyright (c)2004 Dan Cardamore <dan@hld.ca>
+
+  ctw [options] LOCATION
+    options:
+      --refresh=<minutes> : the delay in minutes to refresh.
+      -h, --help : this help text
+      -d : debug output
+      --version: prints the version of this application
+      --nometric: print information in imperial units
+
+   To determine your location code (LOCATION):
+    1. visit: http://www.weather.com
+    2. get your local forecast
+    3. look at the URL, it will look similar to:
+       http://www.weather.com/outlook/travel/local/CAXX0343?from=search_city
+    4. Your location code is the part after "local/" and before "?from"
+       in this example it is CAXX0343
+
+  """ %(version))
+
+if __name__ == "__main__":
+  if weatherfeed.version < 0.2:
+    print("This version of ctw requires weatherfeed.py version 0.2 and above")
+    print("See: http://opensource.hld.ca/trac.cgi/wiki/CurseTheWeather")
+    print("to get the latest version.")
+    sys.exit(1)
+
+  import getopt
+  try:
+    opts, args = getopt.getopt(sys.argv[1:],
+                      "hrv:d", ["help","refresh=","version","nometric"])
+  except getopt.GetoptError:
+    usage()
+    sys.exit(2)
+
+  global debug
+  debug = False
+  global location
+  location = ""
+  global refresh
+  refresh = 60
+  global metric
+  metric = True
+
+  for o, a in opts:
+    if o == "-d":
+      debug = True
+    if o in ("-v", "--version"):
+      printVersion()
+      sys.exit(1)
+    if o in ("-h", "--help"):
+      usage()
+      sys.exit()
+    if o in ("-r", "--refresh"):
+      refresh = int(a)
+    if o in ("--nometric"):
+      metric = False
+
+  if len(args) != 1:
+    print("invalid location, or too many arguments")
+    usage()
+    sys.exit(2)
+
+  for arg in args:
+    location = arg
+
+  if location == "":
+    print("Invalid location!")
+    usage()
+    sys.exit(2)
+
+  if refresh < 10:
+    print("Invalid refresh rate.  Must be at least 10 minute")
+    usage()
+    sys.exit(2)
+
+  curses.wrapper(main)

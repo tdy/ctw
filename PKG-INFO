@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: CurseTheWeather
+Version: 0.6
+Summary: Weather feed backend and ncurses front end for current and forecast weather
+Home-page: http://opensource.hld.ca/trac.cgi/wiki/CurseTheWeather
+Author: Dan Cardamore
+Author-email: dan@hld.ca
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
