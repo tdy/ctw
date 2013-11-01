@@ -52,7 +52,7 @@ class Weather:
     return urlHandle.read()
 
   def _getWeather(self):
-    for node in self.dom.childNodes[3].childNodes:
+    for node in self.dom.childNodes[0].childNodes:
       if node.nodeName == 'cc':
         self._setCurrentConditions(node)
 
