@@ -16,7 +16,9 @@ import pprint
 version = 0.2
 
 class Weather:
-  """ Get the weather from weather.com's XML feed.
+  """
+  Get the weather from weather.com's XML feed.
+
   Dictionaries are created which can be accessed to get access
   to all the weather information.
 
@@ -29,16 +31,11 @@ class Weather:
   def __init__(self, location, metric=True):
     self.currentConditions = {}
     self.forecast = []
-    temp = 0
-    while temp < 10:
+    for _ in range(10):
       self.forecast.append({})
-      temp += 1
 
     self.location = location;
-    if metric:
-      self.units = "m"
-    else:
-      self.units = "s"
+    self.units = 'm' if metric else 's'
 
     self.dom = parseString(self._getData())
     self._getWeather()
@@ -47,12 +44,12 @@ class Weather:
     self.dom.unlink()
 
   def _getData(self):
-    """Connect to weather.com and get the weather as raw XML"""
-    urlHandle = urllib.request.urlopen("http://xoap.weather.com/weather/local/%s?cc=1&dayf=5&prod=xoap&link=xoap&unit=%s&par=1003666583&key=4128909340a9b2fc" %(self.location, self.units))
+    """Connect to weather.com and get the weather as raw XML."""
+    urlHandle = urllib.request.urlopen('http://xoap.weather.com/weather/local/%s?cc=1&dayf=5&prod=xoap&link=xoap&unit=%s&par=1003666583&key=4128909340a9b2fc' %(self.location, self.units))
     return urlHandle.read()
 
   def _getWeather(self):
-    for node in self.dom.childNodes[0].childNodes:
+    for node in self.dom.firstChild.childNodes:
       if node.nodeName == 'cc':
         self._setCurrentConditions(node)
 
@@ -62,130 +59,94 @@ class Weather:
       if node.nodeName == 'loc':
         self._setCurrentConditions(node)
 
-    if self.forecast[0]["day"]["type"] == "N/A":
-      self.forecast[0]["day"]["type"] = self.currentConditions["type"]
-    if self.forecast[0]["day"]["wind"]["speed"] == "N/A" and self.forecast[0]["day"]["wind"]["direction"] == "N/A":
-      self.forecast[0]["day"]["wind"]["speed"] = self.currentConditions["wind"]["speed"]
-      self.forecast[0]["day"]["wind"]["direction"] = self.currentConditions["wind"]["direction"]
+    if self.forecast[0]['day']['type'] == 'N/A':
+      self.forecast[0]['day']['type'] = self.currentConditions['type']
+    if self.forecast[0]['day']['wind']['speed'] == 'N/A' and self.forecast[0]['day']['wind']['direction'] == 'N/A':
+      self.forecast[0]['day']['wind']['speed'] = self.currentConditions['wind']['speed']
+      self.forecast[0]['day']['wind']['direction'] = self.currentConditions['wind']['direction']
 
   def _setCurrentConditions(self, node):
     for elem in node.childNodes:
       if elem.nodeName == 'suns':
-        if elem.firstChild:
-          self.currentConditions["sunset"] = elem.firstChild.data
-        else:
-          self.currentConditions["sunset"] = "NA"
+        self.currentConditions['sunset'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'sunr':
-        if elem.firstChild:
-          self.currentConditions["sunrise"] = elem.firstChild.data
-        else:
-          self.currentConditions["sunrise"] = "NA"
+        self.currentConditions['sunrise'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'lsup':
-        if elem.firstChild:
-          self.currentConditions["observed"] = elem.firstChild.data
-        else:
-          self.currentConditions["observed"] = "NA"
+        self.currentConditions['observed'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'obst':
-        if elem.firstChild:
-          self.currentConditions["cityname"] = elem.firstChild.data
-        else:
-          self.currentConditions["cityname"] = "NA"
+        self.currentConditions['cityname'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'tmp':
-        if elem.firstChild:
-          self.currentConditions["temperature"] = elem.firstChild.data
-        else:
-          self.currentConditions["temperature"] = "NA"
+        self.currentConditions['temperature'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 't':
-        if elem.firstChild:
-          self.currentConditions["type"] = elem.firstChild.data
-        else:
-          self.currentConditions["type"] = "NA"
+        self.currentConditions['type'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'flik':
-        if elem.firstChild:
-          self.currentConditions["feelslike"] = elem.firstChild.data
-        else:
-          self.currentConditions["feelslike"] = "NA"
+        self.currentConditions['feelslike'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'vis':
-        if elem.firstChild:
-          self.currentConditions["visibility"] = elem.firstChild.data
-        else:
-          self.currentConditions["visibility"] = "NA"
+        self.currentConditions['visibility'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'hmid':
-        if elem.firstChild:
-          self.currentConditions["humidity"] = elem.firstChild.data
-        else:
-          self.currentConditions["humidity"] = "NA"
+        self.currentConditions['humidity'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'dewp':
-        if elem.firstChild:
-          self.currentConditions["dewpoint"] = elem.firstChild.data
-        else:
-          self.currentConditions["dewpoint"] = "NA"
+        self.currentConditions['dewpoint'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'bar':
-        self.currentConditions["bar"] = {}
+        self.currentConditions['bar'] = {}
         for subelem in elem.childNodes:
           if subelem.nodeName == 'r':
-            if subelem.firstChild:
-              self.currentConditions["bar"]["reading"] = subelem.firstChild.data
-            else:
-              self.currentConditions["bar"]["reading"] = "NA"
+            self.currentConditions['bar']['reading'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 'd':
-            if subelem.firstChild:
-              self.currentConditions["bar"]["direction"] = subelem.firstChild.data
-            else:
-              self.currentConditions["bar"]["direction"] = "NA"
+            self.currentConditions['bar']['direction'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
       if elem.nodeName == 'uv':
-        self.currentConditions["uv"] = {}
+        self.currentConditions['uv'] = {}
         for subelem in elem.childNodes:
           if subelem.nodeName == 'i':
-            if subelem.firstChild:
-              self.currentConditions["uv"]["index"] = subelem.firstChild.data
-            else:
-              self.currentConditions["uv"]["index"] = "NA"
+            self.currentConditions['uv']['index'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 't':
-            if subelem.firstChild:
-              self.currentConditions["uv"]["risk"] = subelem.firstChild.data
-            else:
-              self.currentConditions["uv"]["risk"] = "NA"
+            self.currentConditions['uv']['risk'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
       if elem.nodeName == 'wind':
-        self.currentConditions["wind"] = {}
+        self.currentConditions['wind'] = {}
         for subelem in elem.childNodes:
           if subelem.nodeName == 's':
-            if subelem.firstChild:
-              self.currentConditions["wind"]["speed"] = subelem.firstChild.data
-            else:
-              self.currentConditions["wind"]["speed"] = "NA"
+            self.currentConditions['wind']['speed'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 'gust':
-            if subelem.firstChild:
-              self.currentConditions["wind"]["gusts"] = subelem.firstChild.data
-            else:
-              self.currentConditions["wind"]["gusts"] = "NA"
+            self.currentConditions['wind']['gusts'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 'd':
-            if subelem.firstChild:
-              self.currentConditions["wind"]["degrees"] = subelem.firstChild.data
-            else:
-              self.currentConditions["wind"]["degrees"] = "NA"
+            self.currentConditions['wind']['degrees'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 't':
-            if subelem.firstChild:
-              self.currentConditions["wind"]["direction"] = subelem.firstChild.data
-            else:
-              self.currentConditions["wind"]["direction"] = "NA"
+            self.currentConditions['wind']['direction'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
   def _setForecast(self, node):
     day = 0
@@ -196,194 +157,142 @@ class Weather:
       if elem.nodeName == 'day':
         self._setForecastDay(
             elem,
-            elem.attributes["d"].value,
-            elem.attributes["t"].value,
-            elem.attributes["dt"].value
+            elem.attributes['d'].value,
+            elem.attributes['t'].value,
+            elem.attributes['dt'].value
         )
 
   def _setForecastDay(self, node, index, day, date):
     index = int(index)
-    self.forecast[index]["Day"] = day
-    self.forecast[index]["Date"] = date
+    self.forecast[index]['Day'] = day
+    self.forecast[index]['Date'] = date
     for elem in node.childNodes:
       if elem.nodeName == 'hi':
-        if elem.firstChild:
-          self.forecast[index]["high"] = elem.firstChild.data
-        else:
-          self.forecast[index]["high"] = "NA"
+        self.forecast[index]['high'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'low':
-        if elem.firstChild.data:
-          self.forecast[index]["low"] = elem.firstChild.data
-        else:
-          self.forecast[index]["low"] = "NA"
+        self.forecast[index]['low'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'sunr':
-        if elem.firstChild:
-          self.forecast[index]["sunrise"] = elem.firstChild.data
-        else:
-          self.forecast[index]["sunrise"] = "NA"
+        self.forecast[index]['sunrise'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'suns':
-        if elem.firstChild:
-          self.forecast[index]["sunset"] = elem.firstChild.data
-        else:
-          self.forecast[index]["sunset"] = "NA"
+        self.forecast[index]['sunset'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'ppcp':
-        if elem.firstChild:
-          self.forecast[index]["pop"] = elem.firstChild.data
-        else:
-          self.forecast[index]["pop"] = "NA"
+        self.forecast[index]['pop'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'hmid':
-        if elem.firstChild:
-          self.forecast[index]["humidity"] = elem.firstChild.data
-        else:
-          self.forecast[index]["humidity"] = "NA"
+        self.forecast[index]['humidity'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'hmid':
-        if elem.firstChild:
-          self.forecast[index]["humidity"] = elem.firstChild.data
-        else:
-          self.forecast[index]["humidity"] = "NA"
+        self.forecast[index]['humidity'] = \
+                elem.firstChild.data if elem.firstChild else "NA"
 
       if elem.nodeName == 'part':
-        if elem.attributes["p"].value == 'd':
-          self.forecast[index]["day"] = {}
+        if elem.attributes['p'].value == 'd':
+          self.forecast[index]['day'] = {}
           for subelem in elem.childNodes:
             if subelem.nodeName == 't':
-              if subelem.firstChild:
-                self.forecast[index]["day"]["type"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["day"]["type"] = "NA"
+              self.forecast[index]['day']['type'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'ppcp':
-              if subelem.firstChild:
-                self.forecast[index]["day"]["pop"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["day"]["pop"] = "NA"
+              self.forecast[index]['day']['pop'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'hmid':
-              if subelem.firstChild:
-                self.forecast[index]["day"]["humidity"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["day"]["humidity"] = "NA"
+              self.forecast[index]['day']['humidity'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'wind':
-              self.forecast[index]["day"]["wind"] = {}
+              self.forecast[index]['day']['wind'] = {}
               for windelem in subelem.childNodes:
                 if windelem.nodeName == 's':
-                  if windelem.firstChild:
-                    self.forecast[index]["day"]["wind"]["speed"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["day"]["wind"]["speed"] = "NA"
+                  self.forecast[index]['day']['wind']['speed'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 'gust':
-                  if windelem.firstChild:
-                    self.forecast[index]["day"]["wind"]["gusts"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["day"]["wind"]["gusts"] = "NA"
+                  self.forecast[index]['day']['wind']['gusts'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 'd':
-                  if windelem.firstChild:
-                    self.forecast[index]["day"]["wind"]["degrees"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["day"]["wind"]["degrees"] = "NA"
+                  self.forecast[index]['day']['wind']['degrees'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 't':
-                  if windelem.firstChild:
-                    self.forecast[index]["day"]["wind"]["direction"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["day"]["wind"]["direction"] = "NA"
+                  self.forecast[index]['day']['wind']['direction'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
-        if elem.attributes["p"].value == 'n':
-          self.forecast[index]["night"] = {}
+        if elem.attributes['p'].value == 'n':
+          self.forecast[index]['night'] = {}
           for subelem in elem.childNodes:
             if subelem.nodeName == 't':
-              if subelem.firstChild:
-                self.forecast[index]["night"]["type"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["night"]["type"] = "NA"
+              self.forecast[index]['night']['type'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'ppcp':
-              if subelem.firstChild:
-                self.forecast[index]["night"]["pop"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["night"]["pop"] = "NA"
+              self.forecast[index]['night']['pop'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'hmid':
-              if subelem.firstChild:
-                self.forecast[index]["night"]["humidity"] = subelem.firstChild.data
-              else:
-                self.forecast[index]["night"]["humidity"] = "NA"
+              self.forecast[index]['night']['humidity'] = \
+                      subelem.firstChild.data if subelem.firstChild else "NA"
 
             if subelem.nodeName == 'wind':
-              self.forecast[index]["night"]["wind"] = {}
+              self.forecast[index]['night']['wind'] = {}
               for windelem in subelem.childNodes:
                 if windelem.nodeName == 's':
-                  if windelem.firstChild:
-                    self.forecast[index]["night"]["wind"]["speed"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["night"]["wind"]["speed"] = "NA"
+                  self.forecast[index]['night']['wind']['speed'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 'gust':
-                  if windelem.firstChild:
-                    self.forecast[index]["night"]["wind"]["gusts"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["night"]["wind"]["gusts"] = "NA"
+                  self.forecast[index]['night']['wind']['gusts'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 'd':
-                  if windelem.firstChild:
-                    self.forecast[index]["night"]["wind"]["degrees"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["night"]["wind"]["degrees"] = "NA"
+                  self.forecast[index]['night']['wind']['degrees'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
                 if windelem.nodeName == 't':
-                  if windelem.firstChild:
-                    self.forecast[index]["night"]["wind"]["direction"] = windelem.firstChild.data
-                  else:
-                    self.forecast[index]["night"]["wind"]["direction"] = "NA"
+                  self.forecast[index]['night']['wind']['direction'] = \
+                          windelem.firstChild.data if windelem.firstChild else "NA"
 
       if elem.nodeName == 'wind':
-        self.forecast[index]["wind"] = {}
+        self.forecast[index]['wind'] = {}
         for subelem in elem.childNodes:
           if subelem.nodeName == 's':
-            if subelem.firstChild:
-              self.forecast[index]["wind"]["speed"] = subelem.firstChild.data
-            else:
-              self.forecast[index]["wind"]["speed"] = "NA"
+            self.forecast[index]['wind']['speed'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 'gust':
-            if subelem.firstChild:
-              self.forecast[index]["wind"]["gusts"] = subelem.firstChild.data
-            else:
-              self.forecast[index]["wind"]["gusts"] = "NA"
+            self.forecast[index]['wind']['gusts'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 'd':
-            if subelem.firstChild:
-              self.forecast[index]["wind"]["degrees"] = subelem.firstChild.data
-            else:
-              self.forecast[index]["wind"]["degrees"] = "NA"
+            self.forecast[index]['wind']['degrees'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
           if subelem.nodeName == 't':
-            if subelem.firstChild:
-              self.forecast[index]["wind"]["direction"] = subelem.firstChild.data
-            else:
-              self.forecast[index]["wind"]["direction"] = "NA"
+            self.forecast[index]['wind']['direction'] = \
+                    subelem.firstChild.data if subelem.firstChild else "NA"
 
   def toString(self):
-    print("Current Conditions: ")
+    print("Current Conditions:")
     pp = pprint.PrettyPrinter(indent=4)
     pp.pprint(self.currentConditions)
 
     print("Forecasts:")
-    day = 0
-    for index in self.forecast:
-      print("Day %d" %(day))
-      pp.pprint(index)
-      day += 1
+    for day, item in enumerate(self.forecast):
+        print("Day %d" %(day))
+        pp.pprint(item)
 
-if __name__ == "__main__":
-  w = Weather("CAXX0343")
+if __name__ == '__main__':
+  w = Weather('CAXX0343')
   print(w.toString())
